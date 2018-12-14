@@ -1,0 +1,152 @@
+import pymysql
+
+class Mysql:
+    def __init__(self, host, port, user, password):
+        self.host = host
+        self.port = port
+        self.user = user
+        self.password = password
+        self.conn = self.connection()
+        if self.conn['state'] == 1:
+            self.conn = self.conn['conn']
+            self.cursor = self.conn.cursor()
+
+    # 获取连接
+    def connection(self):
+        try:
+            conn = pymysql.connect(host=self.host, user=self.user, password=self.password, port=self.port)
+        except pymysql.err.OperationalError as e:
+            print(e)
+            return {'state': 2, 'msg': e,}
+        else:
+            return {'state': 1, 'conn': conn}
+
+    # 返回所有数据库列表
+    def showDataBases(self):
+        self.cursor.execute('show databases')
+        return list(map(lambda item: item[0], self.cursor.fetchall()))
+
+    # 返回某个数据库所有表
+    def showTables(self, db):
+        self.cursor.execute('use %s' % db)
+        self.cursor.execute('show tables')
+        return list(map(lambda item: item[0], self.cursor.fetchall()))
+
+    # 获取当前表字段名
+    def getFields(self, table_name):
+        self.cursor.execute('desc ' + table_name)
+        result = self.cursor.fetchall()
+        return list(map(lambda item: item[0], result))
+
+    # 返回某张表的所有字段和第一页的数据
+    def selectAll(self, db_name, table_name, start, end):
+
+        # 进入要操作的数据库
+        self.cursor.execute('use %s' % db_name)
+
+        # 获取当前表的所有字段名
+        fields = self.getFields(table_name)
+
+        # 获取当前页的数据
+        count = self.cursor.execute('select * from %s where id>%s limit %s' % (table_name, start, end))
+        query_data = self.cursor.fetchall()
+
+        # 返回字段名，数据列表，数据条数
+        return {'fields': fields, 'data_list': query_data , 'count': count}
+
+    # 删除所选数据
+    def delData(self, db_name, table_name, data):
+        # 获取表字段和要删除的数据
+        fields = data.get('fields')
+        data_list = data.get('data_list')
+
+        # 进入当前操作的数据库
+        self.cursor.execute('use %s' % db_name)
+        count = 0
+
+        # 循环要删除的数据
+        for values in data_list:
+
+            # 拼接sql
+            sql = ''
+            for i in range(len(fields)):
+                sql += '%s="%s" and ' % (fields[i], values[i])
+            sql = 'delete from %s where %s' % (table_name, sql[:-5])
+
+            # 执行删除语句
+            count += self.cursor.execute(sql)
+        self.conn.commit()
+        return {'count': count}
+
+    # 添加数据
+    def addData(self, db_name, table_name, data):
+        # 获取表字段和添加的数据
+        fields = data.get('fields')
+        data_list = data.get('data_list')
+
+        # 进入当前数据库
+        self.cursor.execute('use %s' % db_name)
+
+        # 拼接sql
+        sql_keys = ''
+        sql_values = ''
+        for field in fields:
+            sql_keys += field + ','
+            sql_values += '%s,'
+        sql = 'insert into ' + table_name + '(' + sql_keys[:-1] + ')' + ' VALUES(' + sql_values[:-1] + ')'
+
+        # 执行添加操作
+        count = self.cursor.executemany(sql, data_list)
+        self.conn.commit()
+        return {'count': count}
+
+    # 更新数据
+    def updateData(self, db_name, table_name, data):
+        # 获取要更改的数据字段和数据列表
+        fields = data.get('fields')
+        old_data = data.get('old_data')
+        new_data = data.get('data')
+
+        # 切换到当前操作的数据库
+        self.cursor.execute('use %s' % db_name)
+
+        # 拼接sql
+        old_sql = ''
+        new_sql = ''
+        for i in range(len(fields)):
+            old_sql += '%s="%s" and ' % (fields[i], old_data[i])
+            new_sql += '%s="%s",' % (fields[i], new_data[i])
+
+        # 执行sql
+        sql = 'update %s set %s where %s' % (table_name, new_sql[:-1], old_sql[:-5])
+        count = self.cursor.execute(sql)
+        self.conn.commit()
+        return {'count': count}
+
+    # 修改字段属性
+    def modifyField(self, db_name, table_name, data):
+        '{field: id, type: int, is_null: true, default: null, primary_key: true}'
+
+        sql = 'alter table modify '
+
+    # 删除字段
+    def delField(self):
+        pass
+
+    # 添加字段
+    def addField(self):
+        pass
+
+    # 复制表
+    def copyTable(self):
+        pass
+
+
+    # 提交
+    def commit(self):
+        self.conn.commit()
+
+
+mm = Mysql('127.0.0.1', 3306, 'root', 'root!@#$')
+data = mm.selectAll('movie','movie', 0, 100)
+print(data)
