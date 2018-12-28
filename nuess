@@ -19,8 +19,8 @@ class Nessus:
         self.password = password
         self.server_ip = server_ip
         self.token = self.getToken()
-        self.path = ''
-        self.filename = ''
+        self.path = 'data'
+        self.filename = 'test'
         self.now = now()
         self.scan_name = 'test'
         self.headers = {'X-Cookie': 'token={token};'.format(token=self.token),
@@ -281,7 +281,7 @@ class Nessus:
                 continue
 
             csv_data = self.download(scan_id, file_id, return_text=True)
-            self.csv_available.append(self.parseCsv(csv_data, True))
+            self.csv_available.extend(self.parseCsv(csv_data, True))
 
         print('download.............................. for csv')
         file_id = self.getExport(scan_id)['file']
@@ -301,8 +301,10 @@ class Nessus:
         plugin_id_list = []
         hosts = []
         cf = csv.reader(csv_data)
-        for i, line in enumerate(cf):
-            if i == 0 or not line:
+        i = 0
+        for line in cf:
+            i += 1
+            if i == 1 or not line:
                 continue
             else:
                 plugin_id = line[0]
