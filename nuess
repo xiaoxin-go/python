@@ -4,6 +4,7 @@ import time
 import os
 import csv
 import xlwt
+from io import StringIO
 
 from apscheduler.schedulers.background import BackgroundScheduler, BlockingScheduler
 from apscheduler.jobstores.base import JobLookupError
@@ -300,7 +301,12 @@ class Nessus:
         result_list = []
         plugin_id_list = []
         hosts = []
-        cf = csv.reader(csv_data)
+
+        # 将文本读入IO流
+        s = StringIO(csv_data)
+
+        # IO流转换为csv可操作格式
+        cf = csv.reader(s)
         i = 0
         for line in cf:
             i += 1
@@ -348,7 +354,7 @@ class Nessus:
         # 监听执行状态
         #if not self.listenScan(scan_id):
         #    print('监听执行出错')
-        #    return 
+        #    return
 
         # 下载HTML文件
         print('download.............................. for html')
